@@ -9,6 +9,9 @@ const ArduinoSimulator = () => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [viewMode, setViewMode] = useState('component'); // 'component' or 'code'
   const [draggedComponent, setDraggedComponent] = useState(null);
+  const [pinConfig, setPinConfig] = useState({ ledPin: 10, buttonPin: 2 });
+  const [selectedComponent, setSelectedComponent] = useState(null);
+  const [activeTab, setActiveTab] = useState('code'); // 'code' or 'properties'
   const canvasRef = useRef(null);
   const componentIdCounter = useRef(0);
 
@@ -18,16 +21,38 @@ const ArduinoSimulator = () => {
     { type: 'pushbutton', label: 'Push Button', icon: '🔘' }
   ];
 
-  const defaultArduinoCode = `void setup() {
-  // Initialize your pins here
-  pinMode(10, OUTPUT);
-  pinMode(2, INPUT_PULLUP);
-}
+  // Generate Arduino code based on pin configuration
+  const generateArduinoCode = () => {
+    const hasLED = activeComponents.some(comp => comp.type === 'led');
+    const hasButton = activeComponents.some(comp => comp.type === 'pushbutton');
 
-void loop() {
-  // Your main code logic here
-  digitalWrite(10, digitalRead(2));
-}`;
+    let setupCode = 'void setup() {\n';
+    let loopCode = '\nvoid loop() {\n';
+
+    if (hasLED) {
+      setupCode += `  pinMode(${pinConfig.ledPin}, OUTPUT);\n`;
+    }
+
+    if (hasButton) {
+      setupCode += `  pinMode(${pinConfig.buttonPin}, INPUT_PULLUP);\n`;
+    }
+
+    setupCode += '}';
+
+    if (hasLED && hasButton) {
+      loopCode += `  digitalWrite(${pinConfig.ledPin}, digitalRead(${pinConfig.buttonPin}));\n`;
+    } else if (hasLED) {
+      loopCode += `  digitalWrite(${pinConfig.ledPin}, HIGH);\n`;
+    } else if (hasButton) {
+      loopCode += `  // Button on pin ${pinConfig.buttonPin}\n`;
+    } else {
+      loopCode += '  // Add your code here\n';
+    }
+
+    loopCode += '}';
+
+    return setupCode + loopCode;
+  };
 
   const handleSidebarDragStart = (e, componentType) => {
     e.dataTransfer.effectAllowed = 'copy';
@@ -55,6 +80,11 @@ void loop() {
         x: x - 50, // Center the component
         y: y - 50
       };
+      
+      // Auto-wiring: Components are automatically associated with default pins
+      // The pinConfig state already has the default pins (ledPin: 10, buttonPin: 2)
+      // No need to assign pins here as they're managed globally via pinConfig
+      
       setActiveComponents([...activeComponents, newComponent]);
     }
     setDraggedComponent(null);
@@ -73,23 +103,61 @@ void loop() {
     );
   };
 
+  const handleComponentClick = (component) => {
+    // Only allow selection of LED and Push Button for pin configuration
+    if (component.type === 'led' || component.type === 'pushbutton') {
+      setSelectedComponent(component);
+      setActiveTab('properties');
+    }
+  };
+
+  const handlePinChange = (componentType, newPin) => {
+    const pinNumber = parseInt(newPin);
+    
+    if (componentType === 'led') {
+      setPinConfig({ ...pinConfig, ledPin: pinNumber });
+    } else if (componentType === 'pushbutton') {
+      setPinConfig({ ...pinConfig, buttonPin: pinNumber });
+    }
+  };
+
+  // Get available pins for dropdown (D2-D13, excluding already assigned pins)
+  const getAvailablePins = (componentType) => {
+    const allPins = Array.from({ length: 12 }, (_, i) => i + 2); // Pins 2-13
+    
+    if (componentType === 'led') {
+      // For LED: exclude buttonPin
+      return allPins.filter(pin => pin !== pinConfig.buttonPin);
+    } else if (componentType === 'pushbutton') {
+      // For Button: exclude ledPin
+      return allPins.filter(pin => pin !== pinConfig.ledPin);
+    }
+    return allPins;
+  };
+
   const renderComponent = (component) => {
     const { type, x, y, id } = component;
     
     let element;
+    let pinLabel = null;
+    
     switch (type) {
       case 'arduino-uno':
         element = <wokwi-arduino-uno></wokwi-arduino-uno>;
         break;
       case 'led':
         element = <wokwi-led color="red"></wokwi-led>;
+        pinLabel = `D${pinConfig.ledPin}`;
         break;
       case 'pushbutton':
         element = <wokwi-pushbutton></wokwi-pushbutton>;
+        pinLabel = `D${pinConfig.buttonPin}`;
         break;
       default:
         return null;
     }
+
+    const isSelected = selectedComponent?.id === id;
 
     return (
       <Draggable
@@ -98,8 +166,20 @@ void loop() {
         onDrag={(e, data) => handleComponentDrag(id, e, data)}
         handle=".component-handle"
       >
-        <div className="component-handle" style={{ position: 'absolute', cursor: 'move' }}>
+        <div 
+          className={`component-handle ${isSelected ? 'selected' : ''}`}
+          style={{ position: 'absolute', cursor: 'move' }}
+          onClick={(e) => {
+            e.stopPropagation();
+            handleComponentClick(component);
+          }}
+        >
           {element}
+          {pinLabel && (
+            <div className="pin-label" title={`Connected to Pin ${pinLabel}`}>
+              {pinLabel}
+            </div>
+          )}
         </div>
       </Draggable>
     );
@@ -119,8 +199,58 @@ void loop() {
             overflow: 'auto'
           }}
         >
-          {defaultArduinoCode}
+          {generateArduinoCode()}
         </SyntaxHighlighter>
+      </div>
+    );
+  };
+
+  const renderPropertiesPanel = () => {
+    if (!selectedComponent) {
+      return (
+        <div className="properties-empty">
+          <p>Click on an LED or Push Button component to configure its pin assignment.</p>
+        </div>
+      );
+    }
+
+    const { type } = selectedComponent;
+    const availablePins = getAvailablePins(type);
+    const currentPin = type === 'led' ? pinConfig.ledPin : pinConfig.buttonPin;
+
+    return (
+      <div className="properties-content">
+        <div className="property-section">
+          <h3 className="property-title">Component: {type === 'led' ? 'LED (Red)' : 'Push Button'}</h3>
+        </div>
+        
+        <div className="property-section">
+          <label className="property-label">Pin Selection</label>
+          <select
+            className="pin-select"
+            value={currentPin}
+            onChange={(e) => handlePinChange(type, e.target.value)}
+          >
+            {availablePins.map(pin => (
+              <option key={pin} value={pin}>
+                D{pin}
+              </option>
+            ))}
+          </select>
+          <p className="property-hint">
+            {type === 'led' 
+              ? `LED is connected to Digital Pin ${currentPin}. This pin cannot be used by the Push Button.`
+              : `Push Button is connected to Digital Pin ${currentPin}. This pin cannot be used by the LED.`
+            }
+          </p>
+        </div>
+
+        <div className="property-section">
+          <div className="pin-status">
+            <strong>Current Pin Assignment:</strong>
+            <span className="pin-badge">D{currentPin}</span>
+          </div>
+        </div>
       </div>
     );
   };
@@ -178,6 +308,12 @@ void loop() {
             className={`canvas ${isSimulating ? 'simulating' : ''}`}
             onDrop={handleCanvasDrop}
             onDragOver={handleCanvasDragOver}
+            onClick={(e) => {
+              // Deselect component when clicking on empty canvas
+              if (e.target === e.currentTarget || e.target.classList.contains('canvas')) {
+                setSelectedComponent(null);
+              }
+            }}
           >
             {viewMode === 'component' && activeComponents.map(renderComponent)}
             {viewMode === 'component' && activeComponents.length === 0 && (
@@ -205,22 +341,36 @@ void loop() {
         {viewMode === 'component' && (
           <div className="right-panel">
             <div className="panel-tabs">
-              <button className="tab active">CODE (ino)</button>
-              <button className="tab">PROPERTIES</button>
+              <button 
+                className={`tab ${activeTab === 'code' ? 'active' : ''}`}
+                onClick={() => setActiveTab('code')}
+              >
+                CODE (ino)
+              </button>
+              <button 
+                className={`tab ${activeTab === 'properties' ? 'active' : ''}`}
+                onClick={() => setActiveTab('properties')}
+              >
+                PROPERTIES
+              </button>
             </div>
             <div className="panel-content">
-              <SyntaxHighlighter
-                language="cpp"
-                style={vscDarkPlus}
-                customStyle={{
-                  margin: 0,
-                  padding: '15px',
-                  borderRadius: '0',
-                  fontSize: '14px'
-                }}
-              >
-                {defaultArduinoCode}
-              </SyntaxHighlighter>
+              {activeTab === 'code' ? (
+                <SyntaxHighlighter
+                  language="cpp"
+                  style={vscDarkPlus}
+                  customStyle={{
+                    margin: 0,
+                    padding: '15px',
+                    borderRadius: '0',
+                    fontSize: '14px'
+                  }}
+                >
+                  {generateArduinoCode()}
+                </SyntaxHighlighter>
+              ) : (
+                renderPropertiesPanel()
+              )}
             </div>
           </div>
         )}

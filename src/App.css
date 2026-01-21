@@ -193,12 +193,50 @@ body {
 
 .component-handle {
   user-select: none;
+  position: relative;
+}
+
+.component-handle.selected {
+  outline: 2px solid #0e639c;
+  outline-offset: 4px;
+  border-radius: 4px;
 }
 
 .component-handle wokwi-arduino-uno,
 .component-handle wokwi-led,
 .component-handle wokwi-pushbutton {
   display: block;
+}
+
+/* Pin Label */
+.pin-label {
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  background-color: #0e639c;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 4px 8px;
+  border-radius: 4px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  pointer-events: none;
+  z-index: 10;
+  white-space: nowrap;
+  font-family: 'Courier New', monospace;
+}
+
+.pin-label::after {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 4px solid #0e639c;
 }
 
 /* Code View Container */
@@ -310,6 +348,106 @@ body {
 
 ::-webkit-scrollbar-thumb:hover {
   background: #4e4e4e;
+}
+
+/* Properties Panel */
+.properties-content {
+  padding: 20px;
+  color: #d4d4d4;
+}
+
+.properties-empty {
+  padding: 40px 20px;
+  text-align: center;
+  color: #888888;
+}
+
+.properties-empty p {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+.property-section {
+  margin-bottom: 24px;
+}
+
+.property-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+  padding-bottom: 12px;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.property-label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  color: #cccccc;
+  margin-bottom: 8px;
+}
+
+.pin-select {
+  width: 100%;
+  padding: 10px 12px;
+  background-color: #2d2d30;
+  border: 1px solid #3e3e42;
+  border-radius: 4px;
+  color: #d4d4d4;
+  font-size: 14px;
+  font-family: 'Courier New', monospace;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pin-select:hover {
+  border-color: #0e639c;
+  background-color: #3e3e42;
+}
+
+.pin-select:focus {
+  outline: none;
+  border-color: #0e639c;
+  box-shadow: 0 0 0 2px rgba(14, 99, 156, 0.2);
+}
+
+.pin-select option {
+  background-color: #2d2d30;
+  color: #d4d4d4;
+}
+
+.property-hint {
+  font-size: 12px;
+  color: #888888;
+  margin-top: 8px;
+  line-height: 1.5;
+}
+
+.pin-status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: #2d2d30;
+  border-radius: 4px;
+  border: 1px solid #3e3e42;
+}
+
+.pin-status strong {
+  color: #cccccc;
+  font-size: 13px;
+}
+
+.pin-badge {
+  display: inline-block;
+  padding: 6px 12px;
+  background-color: #0e639c;
+  color: #ffffff;
+  border-radius: 4px;
+  font-family: 'Courier New', monospace;
+  font-weight: 600;
+  font-size: 14px;
 }
 
 /* Wokwi Elements Styling */

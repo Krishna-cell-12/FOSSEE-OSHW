@@ -310,25 +310,25 @@ body {
 }
 
 .simulation-btn.start {
-  background-color: #4ec9b0;
+  background-color: #2ecc71; /* green for start */
   color: #1e1e1e;
 }
 
 .simulation-btn.start:hover {
-  background-color: #3ab89d;
+  background-color: #27ae60;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(78, 201, 176, 0.3);
+  box-shadow: 0 4px 12px rgba(46, 204, 113, 0.3);
 }
 
 .simulation-btn.stop {
-  background-color: #f48771;
+  background-color: #e74c3c; /* red for stop */
   color: #ffffff;
 }
 
 .simulation-btn.stop:hover {
-  background-color: #e6755f;
+  background-color: #c0392b;
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(244, 135, 113, 0.3);
+  box-shadow: 0 4px 12px rgba(231, 76, 60, 0.3);
 }
 
 /* Scrollbar Styling */

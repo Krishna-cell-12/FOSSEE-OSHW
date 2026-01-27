@@ -14,6 +14,8 @@ const ArduinoSimulator = () => {
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [activeTab, setActiveTab] = useState('code'); // 'code' or 'properties'
   const [buttonPressed, setButtonPressed] = useState(false);
+  // Track state for each LED by id
+  const [ledStates, setLedStates] = useState({});
   const canvasRef = useRef(null);
   const componentIdCounter = useRef(0);
   const cpuRef = useRef(null);
@@ -63,148 +65,16 @@ const ArduinoSimulator = () => {
     return setupCode + loopCode;
   };
 
-  // Initialize CPU and I/O ports for simulation
-  const initializeCPU = () => {
-    try {
-      // Create CPU instance (ATmega328P for Arduino UNO)
-      const programMemory = new Uint16Array(0x8000);
-      const dataMemory = new Uint8Array(0x10000);
-      const cpu = new CPU(programMemory, dataMemory);
-      cpuRef.current = cpu;
-
-      // Create I/O ports (Arduino UNO uses PORTB, PORTC, PORTD)
-      const portB = new AVRIOPort(cpu, portBConfig);
-      const portC = new AVRIOPort(cpu, portCConfig);
-      const portD = new AVRIOPort(cpu, portDConfig);
-
-      portBRef.current = portB;
-      portCRef.current = portC;
-      portDRef.current = portD;
-
-      return { cpu, portB, portC, portD };
-    } catch (error) {
-      console.error('Error initializing CPU:', error);
-      throw error;
-    }
-  };
-
-  // Convert Arduino pin number to AVR port and bit
-  const getPinPortAndBit = (pin) => {
-    // Arduino UNO pin mapping
-    // Digital pins 0-7: PORTD (bits 0-7)
-    // Digital pins 8-13: PORTB (bits 0-5)
-    if (pin >= 0 && pin <= 7) {
-      return { port: portDRef.current, bit: pin };
-    } else if (pin >= 8 && pin <= 13) {
-      return { port: portBRef.current, bit: pin - 8 };
-    }
-    return null;
-  };
-
-  // Simulate Arduino code execution
-  const simulateArduinoCode = () => {
-    if (!cpuRef.current) return;
-
-    const hasLED = activeComponents.some(comp => comp.type === 'led');
-    const hasButton = activeComponents.some(comp => comp.type === 'pushbutton');
-
-    if (!hasLED && !hasButton) return;
-
-    // Get pin configurations
-    const ledPin = pinConfig.ledPin;
-    const buttonPin = pinConfig.buttonPin;
-
-    // Get port and bit for pins
-    const ledPinInfo = getPinPortAndBit(ledPin);
-    const buttonPinInfo = getPinPortAndBit(buttonPin);
-    
-    if (!ledPinInfo || !ledPinInfo.port) return;
-
-    // Simulate setup() - configure pins as OUTPUT/INPUT_PULLUP
-    // Configure LED pin as OUTPUT
-    try {
-      const ddrAddr = ledPinInfo.port.portConfig.DDR;
-      if (ddrAddr !== undefined && cpuRef.current.data) {
-        cpuRef.current.data[ddrAddr] = cpuRef.current.data[ddrAddr] | (1 << ledPinInfo.bit);
-      }
-    } catch (error) {
-      console.error('Error configuring LED pin:', error);
-    }
-
-    // Configure button pin as INPUT_PULLUP
-    if (hasButton && buttonPinInfo && buttonPinInfo.port) {
-      try {
-        const ddrAddr = buttonPinInfo.port.portConfig.DDR;
-        const portAddr = buttonPinInfo.port.portConfig.PORT;
-        if (ddrAddr !== undefined && portAddr !== undefined && cpuRef.current.data) {
-          cpuRef.current.data[ddrAddr] = cpuRef.current.data[ddrAddr] & ~(1 << buttonPinInfo.bit);
-          cpuRef.current.data[portAddr] = cpuRef.current.data[portAddr] | (1 << buttonPinInfo.bit);
-        }
-      } catch (error) {
-        console.error('Error configuring button pin:', error);
-      }
-    }
-
-    // Simulate loop() - read button and write to LED
-    if (hasLED && hasButton && buttonPinInfo && buttonPinInfo.port) {
-      try {
-        // Read button state (INPUT_PULLUP: pressed = LOW, not pressed = HIGH)
-        const buttonIsPressed = buttonPressed;
-        
-        // Set button pin input value (inverted for pull-up: pressed = false/LOW)
-        buttonPinInfo.port.setPin(buttonPinInfo.bit, !buttonIsPressed);
-        
-        // Write to LED pin based on button state
-        const portAddr = ledPinInfo.port.portConfig.PORT;
-        if (portAddr !== undefined && cpuRef.current.data) {
-          if (buttonIsPressed) {
-            // Button pressed, turn LED on
-            cpuRef.current.data[portAddr] = cpuRef.current.data[portAddr] | (1 << ledPinInfo.bit);
-            updateLEDState(true);
-          } else {
-            // Button not pressed, turn LED off
-            cpuRef.current.data[portAddr] = cpuRef.current.data[portAddr] & ~(1 << ledPinInfo.bit);
-            updateLEDState(false);
-          }
-        }
-      } catch (error) {
-        console.error('Error in simulation loop:', error);
-      }
-    } else if (hasLED) {
-      // Just LED, turn it on
-      try {
-        const portAddr = ledPinInfo.port.portConfig.PORT;
-        if (portAddr !== undefined && cpuRef.current.data) {
-          cpuRef.current.data[portAddr] = cpuRef.current.data[portAddr] | (1 << ledPinInfo.bit);
-          updateLEDState(true);
-        }
-      } catch (error) {
-        console.error('Error turning on LED:', error);
-      }
-    }
-
-    // Execute CPU instructions to simulate processing (reduced to prevent hanging)
-    // Note: We're not actually compiling Arduino code to machine code,
-    // so we skip instruction execution to avoid crashes
-    // The simulation logic above handles the pin states directly
-    // In a full implementation, you would compile the code to HEX and load it here
-  };
-
-  // Update LED element state
-  const updateLEDState = (isOn) => {
-    // Find LED component and update its value attribute
-    const ledComponent = activeComponents.find(comp => comp.type === 'led');
-    if (ledComponent) {
-      // Use setTimeout to ensure DOM is ready
-      setTimeout(() => {
-        const ledElements = document.querySelectorAll('wokwi-led');
-        ledElements.forEach((ledEl) => {
-          if (ledEl.getAttribute('color') === 'red') {
-            ledEl.setAttribute('value', isOn ? 'true' : 'false');
-          }
-        });
-      }, 0);
-    }
+  // LED is controlled by React state so it never “sticks” ON between runs
+  // Update all LEDs ON/OFF
+  const updateAllLEDStates = (isOn) => {
+    setLedStates((prev) => {
+      const newStates = {};
+      activeComponents.forEach((comp) => {
+        if (comp.type === 'led') newStates[comp.id] = Boolean(isOn);
+      });
+      return newStates;
+    });
   };
 
   // Handle button press/release
@@ -220,104 +90,39 @@ const ArduinoSimulator = () => {
     }, 0);
   };
 
-  // Reset simulation
-  const resetSimulation = () => {
-    try {
-      // Clear CPU memory
-      if (cpuRef.current) {
-        if (cpuRef.current.data) {
-          cpuRef.current.data.fill(0);
-        }
-        if (cpuRef.current.progMem) {
-          cpuRef.current.progMem.fill(0);
-        }
-      }
+  // Ensure all LEDs are always OFF when added before simulation
+  useEffect(() => {
+    const hasLED = activeComponents.some((comp) => comp.type === 'led');
+    if (!isSimulating && hasLED) {
+      updateAllLEDStates(false);
+    }
+  }, [activeComponents, isSimulating]);
 
-      // Reset ports
-      if (portBRef.current && cpuRef.current && cpuRef.current.data) {
-        const portBAddr = portBRef.current.portConfig.PORT;
-        const ddrBAddr = portBRef.current.portConfig.DDR;
-        if (portBAddr !== undefined) cpuRef.current.data[portBAddr] = 0;
-        if (ddrBAddr !== undefined) cpuRef.current.data[ddrBAddr] = 0;
-      }
-      if (portCRef.current && cpuRef.current && cpuRef.current.data) {
-        const portCAddr = portCRef.current.portConfig.PORT;
-        const ddrCAddr = portCRef.current.portConfig.DDR;
-        if (portCAddr !== undefined) cpuRef.current.data[portCAddr] = 0;
-        if (ddrCAddr !== undefined) cpuRef.current.data[ddrCAddr] = 0;
-      }
-      if (portDRef.current && cpuRef.current && cpuRef.current.data) {
-        const portDAddr = portDRef.current.portConfig.PORT;
-        const ddrDAddr = portDRef.current.portConfig.DDR;
-        if (portDAddr !== undefined) cpuRef.current.data[portDAddr] = 0;
-        if (ddrDAddr !== undefined) cpuRef.current.data[ddrDAddr] = 0;
-      }
+  // Main simulation logic: all LEDs ON only during simulation
+  useEffect(() => {
+    const hasLED = activeComponents.some((comp) => comp.type === 'led');
+    const hasButton = activeComponents.some((comp) => comp.type === 'pushbutton');
 
-      // Turn off LED
-      updateLEDState(false);
+    if (!isSimulating) {
+      // When simulation is stopped, ensure all LEDs are off and button state cleared
+      updateAllLEDStates(false);
       setButtonPressed(false);
-
-      // Reset button element
-      setTimeout(() => {
-        const buttonElements = document.querySelectorAll('wokwi-pushbutton');
-        buttonElements.forEach((buttonEl) => {
-          buttonEl.setAttribute('pressed', 'false');
-        });
-      }, 0);
-    } catch (error) {
-      console.error('Error resetting simulation:', error);
+      return;
     }
-  };
 
-  // Simulation loop effect
-  useEffect(() => {
-    if (isSimulating) {
-      try {
-        // Initialize CPU if not already initialized
-        if (!cpuRef.current) {
-          initializeCPU();
-        }
+    if (!hasLED) {
+      updateAllLEDStates(false);
+      return;
+    }
 
-        // Start simulation loop
-        simulationIntervalRef.current = setInterval(() => {
-          try {
-            simulateArduinoCode();
-          } catch (error) {
-            console.error('Simulation error:', error);
-            // Stop simulation on error
-            setIsSimulating(false);
-          }
-        }, 16); // ~60 FPS
-
-        return () => {
-          if (simulationIntervalRef.current) {
-            clearInterval(simulationIntervalRef.current);
-            simulationIntervalRef.current = null;
-          }
-        };
-      } catch (error) {
-        console.error('CPU initialization error:', error);
-        setIsSimulating(false);
-      }
+    // All LEDs should only be ON if both button is present and pressed
+    if (hasButton) {
+      updateAllLEDStates(buttonPressed);
     } else {
-      // Stop simulation
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-        simulationIntervalRef.current = null;
-      }
-      resetSimulation();
+      // If only LEDs exist, turn all ON while simulating
+      updateAllLEDStates(true);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isSimulating]);
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (simulationIntervalRef.current) {
-        clearInterval(simulationIntervalRef.current);
-      }
-    };
-  }, []);
+  }, [isSimulating, buttonPressed, activeComponents]);
 
   const handleSidebarDragStart = (e, componentType) => {
     e.dataTransfer.effectAllowed = 'copy';
@@ -410,10 +215,13 @@ const ArduinoSimulator = () => {
       case 'arduino-uno':
         element = <wokwi-arduino-uno></wokwi-arduino-uno>;
         break;
-      case 'led':
-        element = <wokwi-led color="red"></wokwi-led>;
+      case 'led': {
+        // Use per-LED state
+        const ledValue = ledStates[id] ? 'true' : 'false';
+        element = <wokwi-led color="red" value={ledValue}></wokwi-led>;
         pinLabel = `D${pinConfig.ledPin}`;
         break;
+      }
       case 'pushbutton':
         element = (
           <wokwi-pushbutton
@@ -601,14 +409,7 @@ const ArduinoSimulator = () => {
             <div className="simulation-controls">
               <button
                 className={`simulation-btn ${isSimulating ? 'stop' : 'start'}`}
-                onClick={() => {
-                  if (isSimulating) {
-                    setIsSimulating(false);
-                    resetSimulation();
-                  } else {
-                    setIsSimulating(true);
-                  }
-                }}
+                onClick={() => setIsSimulating((prev) => !prev)}
               >
                 {isSimulating ? 'Stop Simulation' : 'Start Simulation'}
               </button>

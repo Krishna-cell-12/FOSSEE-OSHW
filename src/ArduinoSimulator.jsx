@@ -14,7 +14,6 @@ const ArduinoSimulator = () => {
   const [selectedComponent, setSelectedComponent] = useState(null);
   const [activeTab, setActiveTab] = useState('code'); // 'code' or 'properties'
   const [buttonPressed, setButtonPressed] = useState(false);
-  // Track state for each LED by id
   const [ledStates, setLedStates] = useState({});
   const canvasRef = useRef(null);
   const componentIdCounter = useRef(0);
@@ -115,12 +114,11 @@ const ArduinoSimulator = () => {
       return;
     }
 
-    // All LEDs should only be ON if both button is present and pressed
-    if (hasButton) {
-      updateAllLEDStates(buttonPressed);
-    } else {
-      // If only LEDs exist, turn all ON while simulating
+    // Only turn ON LED if simulation is running AND button is present AND pressed
+    if (hasButton && buttonPressed) {
       updateAllLEDStates(true);
+    } else {
+      updateAllLEDStates(false);
     }
   }, [isSimulating, buttonPressed, activeComponents]);
 
@@ -150,12 +148,13 @@ const ArduinoSimulator = () => {
         x: x - 50, // Center the component
         y: y - 50
       };
-      
-      // Auto-wiring: Components are automatically associated with default pins
-      // The pinConfig state already has the default pins (ledPin: 10, buttonPin: 2)
-      // No need to assign pins here as they're managed globally via pinConfig
-      
-      setActiveComponents([...activeComponents, newComponent]);
+      setActiveComponents(prev => {
+        // If adding an LED, initialize its state to OFF
+        if (componentType === 'led') {
+          setLedStates(states => ({ ...states, [newComponent.id]: false }));
+        }
+        return [...prev, newComponent];
+      });
     }
     setDraggedComponent(null);
   };
@@ -225,9 +224,9 @@ const ArduinoSimulator = () => {
       case 'pushbutton':
         element = (
           <wokwi-pushbutton
-            onMouseDown={() => handleButtonPress(true)}
+            onMouseDown={() => { handleButtonPress(true); setSelectedComponent(component); setActiveTab('properties'); }}
             onMouseUp={() => handleButtonPress(false)}
-            onTouchStart={() => handleButtonPress(true)}
+            onTouchStart={() => { handleButtonPress(true); setSelectedComponent(component); setActiveTab('properties'); }}
             onTouchEnd={() => handleButtonPress(false)}
           ></wokwi-pushbutton>
         );
@@ -335,6 +334,26 @@ const ArduinoSimulator = () => {
     );
   };
 
+  // Start simulation and auto-select push button if present
+  const handleStartSimulation = () => {
+    setIsSimulating((prev) => {
+      const next = !prev;
+      if (!prev && next) { // simulation is starting
+        // Try to select the push button if present
+        const button = activeComponents.find(comp => comp.type === 'pushbutton');
+        if (button) {
+          setSelectedComponent(button);
+          setActiveTab('properties');
+        } else {
+          setSelectedComponent(null);
+        }
+      } else if (prev && !next) {
+        setSelectedComponent(null);
+      }
+      return next;
+    });
+  };
+
   return (
     <div className="arduino-simulator">
       {/* Top Toolbar */}
@@ -409,7 +428,7 @@ const ArduinoSimulator = () => {
             <div className="simulation-controls">
               <button
                 className={`simulation-btn ${isSimulating ? 'stop' : 'start'}`}
-                onClick={() => setIsSimulating((prev) => !prev)}
+                onClick={handleStartSimulation}
               >
                 {isSimulating ? 'Stop Simulation' : 'Start Simulation'}
               </button>

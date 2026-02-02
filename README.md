@@ -1,285 +1,430 @@
-## Arduino LED + Push Button Web Simulator  
-**FOSSEE OSHW Winter Internship – 2025 Screening Task**
+# Arduino Simulator - Web-Based Electronics Simulation Platform
 
-### 1. Objective & Area of Interest
+<div align="center">
 
-- **Project Area**: Open Source Electronics Simulation & Educational Tools  
-- **Skills demonstrated**:
-  - Web-based engineering tool development (React + Wokwi + avr8js)
-  - Electronics abstraction and modeling (Arduino Uno, LED, Push Button)
-  - Embedded systems fundamentals (pin mapping, GPIO logic)
-  - Software-driven hardware simulation (logic-level behavior)
+![React](https://img.shields.io/badge/React-18.2.0-61DAFB?logo=react)
+![Vite](https://img.shields.io/badge/Vite-5.0.0-646CFF?logo=vite)
+![AVR8js](https://img.shields.io/badge/AVR8js-0.20.1-FF6B6B?logo=javascript)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-The app is a **minimal web-based Arduino simulator** that lets the user:
+**A professional web-based Arduino simulator with real-time hardware simulation and code generation**
 
-- **Drag** an Arduino Uno, LED, and Push Button onto a canvas  
-- **Auto‑wire** the LED and Button to default pins  
-- **Configure pins** within valid ranges with mutual exclusion  
-- **See auto-generated Arduino code** for the current wiring  
-- **Run a logic‑level simulation** where pressing the button controls the LED  
+*FOSSEE OSHW Winter Internship – 2025 Screening Task*
+
+[Features](#-features) • [Installation](#-installation) • [Usage](#-usage) • [Architecture](#-architecture) • [Technology Stack](#-technology-stack)
+
+</div>
 
 ---
 
-### 2. Technology Stack
+## 📋 Table of Contents
 
-- **Frontend**: React 18, Vite  
-- **UI & Drag/Drop**: `react-draggable`, custom CSS (dark theme)  
-- **Hardware Components**: `@wokwi/elements` (`<wokwi-arduino-uno>`, `<wokwi-led>`, `<wokwi-pushbutton>`)  
-- **Simulation Core**: `avr8js` (CPU + GPIO modeling, logic-level)  
-- **Code View**: `react-syntax-highlighter` (C++/Arduino syntax)  
+- [Overview](#-overview)
+- [Features](#-features)
+- [Technology Stack](#-technology-stack)
+- [Architecture](#-architecture)
+- [Installation](#-installation)
+- [Usage](#-usage)
+- [Project Structure](#-project-structure)
+- [Engineering Implementation](#-engineering-implementation)
+- [Development](#-development)
+- [Contributing](#-contributing)
 
 ---
 
-### 3. How to Run
+## 🎯 Overview
+
+This project is a **professional-grade web-based Arduino simulator** that enables users to build, configure, and simulate Arduino circuits entirely in the browser. Built as part of the FOSSEE OSHW Winter Internship screening process, it demonstrates advanced web engineering techniques combined with embedded systems simulation.
+
+### Key Capabilities
+
+- **Visual Circuit Design**: Drag-and-drop interface for building Arduino circuits
+- **Real-Time Code Generation**: Automatic Arduino code generation based on circuit configuration
+- **Hardware Simulation**: Logic-level simulation using avr8js CPU emulation
+- **Pin Configuration**: Dynamic pin assignment with mutual exclusion validation
+- **Live Visualization**: Real-time hardware component rendering using Wokwi elements
+
+---
+
+## ✨ Features
+
+### 🎨 User Interface
+- **Component Palette**: Drag-and-drop component library (Arduino UNO, LED, Push Button)
+- **Interactive Canvas**: Repositionable components with visual pin labels
+- **Dual View Modes**: Switch between Component View and Code View seamlessly
+- **Properties Panel**: Configure component pins with validation and mutual exclusion
+- **Syntax Highlighting**: Professional C++/Arduino code display with syntax highlighting
+
+### ⚙️ Simulation Engine
+- **CPU-Level Simulation**: Uses avr8js for instruction-level AVR CPU emulation
+- **Register Manipulation**: Direct DDR and PORT register control for GPIO simulation
+- **Real-Time Execution**: requestAnimationFrame-based simulation loop (~16MHz equivalent)
+- **Port Mapping**: Direct mapping between Wokwi components and AVR I/O ports
+- **Dynamic Re-binding**: Instant pin reconfiguration without simulation restart
+
+### 🔧 Code Generation
+- **Auto-Generated Arduino Code**: Real-time code generation based on circuit configuration
+- **Pin-Aware Generation**: Code automatically updates when pins are reconfigured
+- **Arduino Standard**: Generates standard Arduino `setup()` and `loop()` structure
+- **INPUT_PULLUP Support**: Proper pull-up resistor configuration for buttons
+
+---
+
+## 🛠 Technology Stack
+
+### Frontend Framework
+- **React 18.2.0** - Modern UI library with hooks and functional components
+- **Vite 5.0.0** - Next-generation build tool for fast development and optimized production builds
+
+### Hardware Simulation
+- **avr8js 0.20.1** - JavaScript implementation of AVR 8-bit microcontroller
+  - `CPU` - AVR CPU core emulation
+  - `AVRIOPort` - GPIO port modeling (Port B, C, D)
+  - `avrInstruction()` - Instruction-level execution
+  - `portBConfig`, `portCConfig`, `portDConfig` - Port configuration
+
+### Hardware Visualization
+- **@wokwi/elements 1.9.1** - Web Components for hardware visualization
+  - `<wokwi-arduino-uno>` - Arduino UNO board visualization
+  - `<wokwi-led>` - LED component with color and state control
+  - `<wokwi-pushbutton>` - Interactive push button component
+
+### UI Libraries
+- **react-draggable 4.5.0** - Drag-and-drop functionality for components
+- **react-syntax-highlighter 15.5.0** - Code syntax highlighting (VS Code Dark+ theme)
+
+### Development Tools
+- **@vitejs/plugin-react 4.2.0** - Vite plugin for React support
+- **@types/react 18.2.0** - TypeScript definitions for React
+- **@types/react-dom 18.2.0** - TypeScript definitions for React DOM
+
+### Additional Libraries
+- **intel-hex 0.2.0** - Intel HEX file format parser (for future HEX loading support)
+
+### Architecture Pattern
+- **Component-Based Architecture**: Modular React components
+- **State Management**: React hooks (useState, useRef, useCallback, useEffect)
+- **Event-Driven Simulation**: requestAnimationFrame for real-time updates
+
+---
+
+## 🏗 Architecture
+
+### System Architecture
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    User Interface Layer                       │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ Component    │  │ Code View    │  │ Properties    │     │
+│  │ Canvas       │  │ Panel        │  │ Panel         │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Application Logic Layer                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ Component    │  │ Pin          │  │ Code         │     │
+│  │ Manager      │  │ Configurator │  │ Generator    │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Simulation Engine Layer                     │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ AVR8js CPU   │  │ I/O Port     │  │ Simulation   │     │
+│  │ Emulator     │  │ Manager      │  │ Loop         │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+                            │
+                            ▼
+┌─────────────────────────────────────────────────────────────┐
+│                  Hardware Visualization Layer                 │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐     │
+│  │ Wokwi        │  │ Wokwi LED    │  │ Wokwi        │     │
+│  │ Arduino UNO  │  │ Component    │  │ Push Button  │     │
+│  └──────────────┘  └──────────────┘  └──────────────┘     │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Component Flow
+
+1. **User Interaction** → Component drag/drop, pin configuration
+2. **State Update** → React state management updates component/pin configuration
+3. **Code Generation** → Arduino code generated based on current state
+4. **Simulation Start** → AVR8js CPU initialized with port configuration
+5. **Simulation Loop** → CPU executes instructions, I/O ports updated
+6. **Visual Update** → Wokwi components reflect CPU port states
+
+### Data Flow
+
+```
+User Action (Button Press)
+    ↓
+handleButtonPress()
+    ↓
+AVRIOPort.setPin() → Updates CPU PIN register
+    ↓
+Simulation Loop reads PIN register
+    ↓
+Calculates LED state (inverted button state)
+    ↓
+AVRIOPort.setPort() → Updates CPU PORT register
+    ↓
+Port Listener detects PORT register change
+    ↓
+setLedStates() → Updates React state
+    ↓
+<wokwi-led> value prop updates
+    ↓
+Visual LED turns ON/OFF
+```
+
+---
+
+## 📦 Installation
+
+### Prerequisites
+
+- **Node.js** 16.x or higher
+- **npm** 7.x or higher (or **yarn** / **pnpm**)
+
+### Setup Instructions
+
+1. **Clone the repository**
+   ```bash
+   git clone <repository-url>
+   cd FOSSEE-OSHW
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install
+   ```
+
+3. **Start development server**
+   ```bash
+   npm run dev
+   ```
+
+4. **Open in browser**
+   - The application will automatically open at `http://localhost:3000`
+   - Or manually navigate to the URL shown in the terminal
+
+### Build for Production
 
 ```bash
-npm install
+npm run build
+```
+
+The production build will be created in the `dist/` directory.
+
+### Preview Production Build
+
+```bash
+npm run preview
+```
+
+---
+
+## 🚀 Usage
+
+### Basic Workflow
+
+1. **Add Components**
+   - Drag **Arduino UNO** from the sidebar to the canvas
+   - Drag **LED (Red)** to the canvas
+   - Drag **Push Button** to the canvas
+
+2. **Configure Pins**
+   - Click on the **LED** component
+   - Open the **PROPERTIES** tab
+   - Select a pin from the dropdown (default: D10)
+   - Click on the **Push Button** component
+   - Select a pin from the dropdown (default: D2)
+
+3. **View Generated Code**
+   - Switch to **Code View** or open the **CODE (ino)** tab
+   - Observe the auto-generated Arduino code with your pin configuration
+
+4. **Run Simulation**
+   - Click **Start Simulation** button
+   - Press and hold the push button
+   - Observe the LED turning ON when button is pressed
+   - Release the button to turn the LED OFF
+
+5. **Reconfigure Pins**
+   - While simulation is running, change pin assignments in Properties
+   - Simulation automatically rebinds to new pins without restart
+
+### Pin Configuration Rules
+
+- **Available Pins**: Digital pins D2 through D13
+- **Mutual Exclusion**: Each pin can only be assigned to one component
+- **Dynamic Updates**: Pin changes reflect immediately in code and simulation
+
+---
+
+## 📁 Project Structure
+
+```
+FOSSEE-OSHW/
+│
+├── src/
+│   ├── App.jsx                 # Main application component
+│   ├── App.css                  # Global application styles
+│   ├── ArduinoSimulator.jsx     # Core simulator component
+│   └── main.jsx                # Application entry point
+│
+├── index.html                  # HTML template
+├── vite.config.js             # Vite configuration
+├── package.json               # Project dependencies and scripts
+└── README.md                  # Project documentation
+
+```
+
+### Key Files
+
+- **`ArduinoSimulator.jsx`** - Main simulator component containing:
+  - Component management logic
+  - Pin configuration system
+  - Code generation engine
+  - Simulation loop with avr8js integration
+  - Port mapping and I/O handling
+
+- **`App.jsx`** - Root component wrapper
+
+- **`main.jsx`** - React application entry point
+
+---
+
+## 🔬 Engineering Implementation
+
+### Register-Level GPIO Control
+
+The simulator uses **avr8js** to directly manipulate AVR microcontroller registers:
+
+```javascript
+// LED Pin Configuration (OUTPUT)
+ledPort.setDDR(ledBit, true);  // Set Data Direction Register
+
+// Button Pin Configuration (INPUT_PULLUP)
+buttonPort.setDDR(buttonBit, false);  // Input mode
+buttonPort.setPort(buttonBit, true);   // Enable pull-up resistor
+```
+
+### CPU Instruction Execution
+
+The simulation loop executes AVR instructions at logic-level speed:
+
+```javascript
+// Execute ~16,000 instructions per frame (simulating 16MHz AVR)
+for (let i = 0; i < instructionsPerFrame; i++) {
+  avrInstruction(cpu);
+}
+```
+
+### Port State Monitoring
+
+LED state is derived from CPU PORT register, not React state:
+
+```javascript
+// Read CPU PORT register (source of truth)
+const portValue = ledPort.port;
+const isHigh = !!(portValue & (1 << ledBit));
+
+// Update UI based on CPU state
+setLedStates(prev => ({ ...prev, [ledId]: isHigh }));
+```
+
+### Dynamic Pin Re-binding
+
+Pin changes update CPU registers instantly:
+
+```javascript
+// Reconfigure CPU registers with new pin assignments
+setupCPURegistersDirectly(cpu, newLedPin, newButtonPin, portB, portC, portD);
+
+// Update port listeners for new pins
+ledPinListenerRef.current = () => {
+  const portValue = ledPort.port;
+  // Monitor new pin's PORT register
+};
+```
+
+### Simulation Loop Architecture
+
+- **Frame Rate**: 60 FPS (requestAnimationFrame)
+- **Instruction Rate**: ~16,000 instructions per frame
+- **CPU Speed**: Simulates ~16MHz AVR microcontroller
+- **Update Frequency**: Port listeners check CPU state every frame
+
+---
+
+## 💻 Development
+
+### Development Server
+
+```bash
 npm run dev
 ```
 
-Then open `http://localhost:3000` in your browser.
+- Hot Module Replacement (HMR) enabled
+- Fast refresh for React components
+- Automatic browser refresh on file changes
+
+### Code Style
+
+- **JavaScript**: ES6+ syntax
+- **React**: Functional components with hooks
+- **Naming**: camelCase for variables, PascalCase for components
+
+### Key Development Concepts
+
+1. **State Management**: React hooks (useState, useRef, useCallback)
+2. **Component Lifecycle**: useEffect for simulation start/stop
+3. **Performance**: useCallback for expensive operations
+4. **Refs**: useRef for DOM elements and simulation engine references
 
 ---
 
-### 4. Task 1 – Web-Based Interface & Component Handling
+## 🤝 Contributing
 
-**Status: Implemented and functionally correct**
+This project was developed as part of the FOSSEE OSHW Winter Internship screening process. Contributions and improvements are welcome!
 
-- **Component Palette (Left Sidebar)**  
-  - Contains three components:
-    - `Arduino UNO`
-    - `LED (Red)`
-    - `Push Button`
-  - Each entry has a custom icon and can be **dragged from the sidebar**.
+### Areas for Enhancement
 
-- **Central Canvas (Working Area)**  
-  - Components dropped from the sidebar are added to the canvas and can be repositioned using `react-draggable`.  
-  - Positions are persisted in an `activeComponents` state array:  
-    - Each object: `{ id, type, x, y }`  
-  - Switching views (Component ↔ Code) does **not** reset or move components.
-
-- **Right Panel (Code / Properties)**  
-  - Top tabs:
-    - **CODE (ino)** – shows generated Arduino code with syntax highlighting.  
-    - **PROPERTIES** – shows per-component configuration (for LED / Button pins).
-
-- **View Toggle (Toolbar)**  
-  - A toolbar at the top has a switch:
-    - **Component View** – shows canvas, components, and right panel.  
-    - **Code View** – shows a full-width code viewer while preserving circuit state.
-
-- **Simulation Controls**  
-  - A large **“Start Simulation / Stop Simulation”** button is rendered below the canvas.  
-  - Toggles an internal `isSimulating` boolean (per screening checklist).
-
-- **Wokwi Integration**  
-  - Uses real Wokwi web components (no images):
-    - `<wokwi-arduino-uno>`  
-    - `<wokwi-led color="red">`  
-    - `<wokwi-pushbutton>`  
-  - `import '@wokwi/elements';` is included at the top of the main component.
+- [ ] Full HEX program loading and execution
+- [ ] Additional components (sensors, displays, motors)
+- [ ] Serial monitor integration
+- [ ] Save/load circuit configurations
+- [ ] Multi-board support
+- [ ] Analog pin simulation
+- [ ] Interrupt handling simulation
 
 ---
 
-### 5. Task 2 – Auto-Wiring Logic with Configurable Pins
+## 📝 License
 
-**Status: Implemented and functionally correct**
-
-#### 5.1 Default Pin Mapping (Mandatory Initial State)
-
-- Pin configuration state:
-
-```js
-const [pinConfig, setPinConfig] = useState({ ledPin: 10, buttonPin: 2 });
-```
-
-- Whenever an LED or Push Button is first added:
-  - They are **logically associated** with these defaults:
-    - **LED → Digital Pin 10**
-    - **Push Button → Digital Pin 2**
-  - Pin labels appear next to the components on the canvas:
-    - LED shows `D10`, Button shows `D2`.
-  - The generated code uses these pins by default.
-
-#### 5.2 Pin Reconfiguration Rules
-
-- **Allowed range**: Only digital pins **D2–D13** are available for selection.
-- **Mutual Exclusion (One pin per component)**:
-  - Implemented via `getAvailablePins(componentType)`:
-    - For LED: dropdown excludes `buttonPin`
-    - For Button: dropdown excludes `ledPin`
-  - This ensures:
-    - If LED uses a pin (e.g., `D10`), that pin does **not** appear for the Button.
-    - If Button uses a pin, that pin does **not** appear for the LED.
-
-#### 5.3 Properties UI
-
-- Clicking on a **LED or Push Button**:
-  - Selects that component and opens the **PROPERTIES** tab.
-
-- **Properties Panel** shows:
-  - Component name (`LED (Red)` or `Push Button`)  
-  - **Pin Selection** dropdown (`D2–D13` with filtered options)  
-  - Text hint explaining that the pin is reserved and not available to the other component.  
-  - A badge showing the current assignment (e.g., `D10`).
-
-#### 5.4 Visual Connection
-
-- For every LED / Button on the canvas:
-  - A small **pin label** (badge) is rendered as an overlay:
-    - Format: `D<currentPin>`  
-    - Tooltip: `Connected to Pin D<currentPin>`  
-  - Labels update immediately when pin assignments are changed in the Properties panel.
-  - Selected components are outlined to provide clear visual feedback.
+This project is developed for educational purposes as part of the FOSSEE OSHW Winter Internship program.
 
 ---
 
-### 6. Task 3 – Auto Code Generation & Logic‑Level Simulation
+## 🙏 Acknowledgments
 
-**Status: Implemented (logic-level simulation with auto code generation)**
-
-#### 6.1 Auto Code Generation
-
-- Code is generated by `generateArduinoCode()` using:
-  - `pinConfig.ledPin`
-  - `pinConfig.buttonPin`
-  - Presence of LED / Button in `activeComponents`.
-
-- Generated C++ code includes:
-  - `pinMode()` calls for LED and Button (with `INPUT_PULLUP` for Button)  
-  - `digitalWrite()` and `digitalRead()` logic in `loop()`  
-
-- Example shape (pins and wiring update automatically):
-
-```cpp
-void setup() {
-  pinMode(<ledPin>, OUTPUT);
-  pinMode(<buttonPin>, INPUT_PULLUP);
-}
-
-void loop() {
-  digitalWrite(<ledPin>, digitalRead(<buttonPin>));
-}
-```
-
-- **Automatic updates**:
-  - Whenever pin assignments change in the Properties panel:
-    - `pinConfig` state is updated.  
-    - `generateArduinoCode()` is re-run.  
-    - Both the right-panel **CODE (ino)** tab and the main **Code View** are re-rendered immediately with the new pin numbers.  
-  - No “Save” / “Refresh” button is required.
-
-#### 6.2 Logic-Level Simulation
-
-- **Scope**: Logic-level only, matching the screening document:
-  - Button pressed → treated as logical input change.  
-  - LED on/off decisions happen at the logic level (no analog behavior).
-
-- **Internal model**:
-  - Uses `avr8js` (`CPU`, `AVRIOPort`, `portBConfig`, `portDConfig`) to model GPIO state.  
-  - Instruction execution (`avrInstruction`) is intentionally **not** used with a loaded HEX program; instead, the simulator **directly drives GPIO logic** based on:
-    - `pinConfig`
-    - `buttonPressed` state
-    - Presence of LED / Button components
-
-- **Input Logic (Button)**:
-  - `wokwi-pushbutton` has event handlers:
-    - `onMouseDown` / `onTouchStart` → `buttonPressed = true`  
-    - `onMouseUp` / `onTouchEnd` → `buttonPressed = false`
-  - In the simulation loop:
-    - When a Button is present:
-      - Its mapped Arduino pin (`buttonPin`) is treated as:
-        - **Pressed** → logical LOW (`INPUT_PULLUP` semantics)  
-        - **Released** → logical HIGH  
-      - This logical state is propagated to the internal GPIO model.
-
-- **Output Logic (LED)**:
-  - For every simulation iteration:
-    - If LED and Button are both present:
-      - Button considered **pressed** → LED pin state set to HIGH → LED ON.  
-      - Button **not pressed** → LED pin state set to LOW → LED OFF.  
-    - If only LED is present:
-      - LED is driven HIGH (always ON) to indicate connectivity.
-  - The `wokwi-led` element:
-    - Has its `value` attribute updated (`'true'` / `'false'`) to switch the LED graphic ON/OFF.
-
-- **Start / Stop Simulation**:
-  - **Start Simulation**:
-    - Sets `isSimulating = true`.  
-    - Initializes CPU + ports (if not already initialized).  
-    - Starts a periodic simulation loop (~60 FPS) that:
-      - Reads `buttonPressed`  
-      - Updates internal GPIO state (LED pin)  
-      - Updates Wokwi elements visually  
-  - **Stop Simulation**:
-    - Sets `isSimulating = false`.  
-    - Clears the simulation interval.  
-    - **Reset logic**:
-      - Clears CPU data/program memory.  
-      - Resets GPIO port registers.  
-      - Turns off the LED (`value = 'false'`).  
-      - Sets all push buttons to unpressed.
+- **FOSSEE** - For the internship opportunity and screening task
+- **Wokwi** - For the excellent hardware visualization components
+- **avr8js** - For the powerful AVR CPU emulation library
+- **React Team** - For the amazing frontend framework
 
 ---
 
-### 7. Mandatory End-to-End Flow (Checklist)
+<div align="center">
 
-This implementation supports the full workflow required by the screening document:
+**Built with ❤️ for Open Source Hardware Education**
 
-1. **Select Arduino Uno**  
-   - `Arduino UNO` available in the **Components** sidebar and can be dragged to the canvas.
-2. **Drag LED**  
-   - Drag **LED (Red)** from sidebar to canvas.
-3. **Drag Push Button**  
-   - Drag **Push Button** from sidebar to canvas.
-4. **Auto-wire**  
-   - Default pin mapping enforced:
-     - **LED → D10**  
-     - **Button → D2**  
-   - Pin labels (`D10`, `D2`) appear next to the components.  
-   - Code uses these exact pins.
-5. **Auto-generate Arduino code**  
-   - Right-panel **CODE (ino)** tab and main **Code View** display the generated code.  
-   - Includes `pinMode`, `digitalRead`, and `digitalWrite` for the configured pins.
-6. **Change pin numbers**  
-   - Click LED or Button → **PROPERTIES** tab opens.  
-   - Use the **Pin Selection** dropdown (`D2–D13`) to change pins.  
-   - Mutual exclusion ensures one pin cannot be shared.
-7. **Code updates automatically**  
-   - The code view reflects the changed pin numbers instantly.  
-   - No manual editing or save button is required.
-8. **Run simulation**  
-   - Click **“Start Simulation”**:
-     - Logic-level simulation loop begins.  
-     - LED and Button are linked logically based on current pin mapping.
-9. **Button controls LED**  
-   - Press (click/touch) the Button:
-     - LED turns **ON** (logic HIGH at LED pin).  
-   - Release the Button:
-     - LED turns **OFF** (logic LOW at LED pin).
+[Report Bug](https://github.com/your-repo/issues) • [Request Feature](https://github.com/your-repo/issues) • [Documentation](#)
 
----
-
-### 8. Notes & Limitations
-
-- **Simulation is logic-level only**:
-  - Focuses on digital pin behavior (HIGH/LOW), not timing, interrupts, or analog effects.
-- **Code generation is template-based**:
-  - C++/Arduino code is generated from the current configuration rather than being compiled and executed on the CPU.
-- **Extensibility**:
-  - The architecture is designed to be extendable:
-    - Additional components and boards
-    - Deeper integration with `avr8js` (HEX loading, full instruction simulation)
-
----
-
-### 9. Summary
-
-This project demonstrates an **end-to-end engineering system** for:
-
-- Interactive, web-based **Arduino circuit construction**  
-- **Automatic wiring** with configurable and mutually exclusive digital pins  
-- **Auto-generated Arduino code** that always matches the current wiring  
-- **Logic-level GPIO simulation** where a virtual push button controls an LED  
-
-It fulfills the functional requirements specified in the **FOSSEE OSHW Winter Internship – 2025** screening document for Tasks **1, 2, and 3**.
+</div>

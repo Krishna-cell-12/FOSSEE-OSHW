@@ -421,10 +421,3 @@ This project is developed for educational purposes as part of the FOSSEE OSHW Wi
 
 ---
 
-<div align="center">
-
-**Built with ❤️ for Open Source Hardware Education**
-
-[Report Bug](https://github.com/your-repo/issues) • [Request Feature](https://github.com/your-repo/issues) • [Documentation](#)
-
-</div>
